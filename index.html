@@ -21,7 +21,7 @@
         .app-container { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; width: 100%; max-width: 1000px; background: #2C2C2E; padding: 30px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .app-container.show { opacity: 1; pointer-events: auto; }
         
-        .header-area { grid-column: 1 / -1; border-bottom: 1px solid #3A3A3C; padding-bottom: 15px; margin-bottom: 10px; }
+        .header-area { grid-column: 1 / -1; border-bottom: 1px solid #3A3A3C; padding-bottom: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         h1 { font-size: 24px; margin-bottom: 5px; }
         
         .summary-card { background: #3A3A3C; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
@@ -36,16 +36,25 @@
         input::placeholder { color: #8E8E93; }
         button { background: #007AFF; color: #FFF; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { background: #0062CC; }
-        
+
+        /* ÖZEL TARİH ALANI SEÇİMİ */
+        .date-toggle-area { display: flex; flex-direction: column; gap: 8px; }
+        .date-toggle-btn { background: none; border: 1px dashed #48484A; color: #8E8E93; padding: 8px; border-radius: 6px; font-size: 12px; cursor: pointer; text-align: left; }
+        .date-toggle-btn:hover { border-color: #007AFF; color: #FFF; }
+        .custom-date-box { display: none; flex-direction: column; gap: 4px; }
+        .custom-date-box label { font-size: 11px; color: #8E8E93; }
+
         .month-selection-box { background: #3A3A3C; padding: 15px; border-radius: 12px; max-height: 150px; overflow-y: auto; margin-bottom: 15px; }
         .month-box-title { font-size: 13px; color: #AEAEE2; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; }
         .month-checkbox-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; font-size: 14px; }
         .month-checkbox-item input { width: auto; margin: 0; cursor: pointer; scale: 1.2; }
 
-        /* YEDEKLEME ALANI TASARIMI */
-        .backup-group { display: flex; gap: 10px; }
-        .backup-btn { flex: 1; padding: 10px; font-size: 12px; background: #3A3A3C; color: #FFF; border: 1px solid #48484A; }
+        /* YEDEKLEME & AYAR BUTONLARI */
+        .backup-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        .backup-btn { flex: 1; padding: 10px; font-size: 12px; background: #3A3A3C; color: #FFF; border: 1px solid #48484A; border-radius: 8px; }
         .backup-btn:hover { background: #48484A; }
+        .settings-btn { width: 100%; padding: 10px; font-size: 12px; background: #2C2C2E; color: #8E8E93; border: 1px solid #48484A; border-radius: 8px; }
+        .settings-btn:hover { color: #FFF; border-color: #8E8E93; }
 
         .list-section { background: #3A3A3C; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; height: 100%; min-height: 520px; max-height: 620px; }
         .list-title-container { border-bottom: 1px solid #48484A; padding-bottom: 12px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
@@ -84,8 +93,10 @@
     <!-- ANA UYGULAMA PANELİ -->
     <div class="app-container" id="appContainer">
         <div class="header-area">
-            <h1>Cüzdanım</h1>
-            <p style="color: #8E8E93; font-size: 14px;">Güvenli, Çoklu Dönem & Yedeklenebilir Bütçe Takipçisi</p>
+            <div>
+                <h1>Cüzdanım</h1>
+                <p style="color: #8E8E93; font-size: 14px;">Güvenli, Çoklu Dönem & Yedeklenebilir Bütçe Takipçisi</p>
+            </div>
         </div>
 
         <div class="left-panel">
@@ -105,7 +116,7 @@
             </div>
 
             <div class="input-group">
-                <input type="text" id="txTitle" placeholder="İşlem adı (örn: Kira, Maaş)">
+                <input type="text" id="txTitle" placeholder="İşlem adı (örn: Kira, Market)">
                 <input type="number" id="txAmount" placeholder="Tutar (₺)">
                 <select class="form-select" id="txType">
                     <option value="gider">Gider</option>
@@ -113,6 +124,16 @@
                 </select>
                 <select class="form-select" id="txTargetMonth" style="background: #2C2C2E; border: 1px solid #3A3A3C;">
                 </select>
+
+                <!-- ÖZEL TARİH SEÇİM DÜĞMESİ -->
+                <div class="date-toggle-area">
+                    <button class="date-toggle-btn" type="button" onclick="toggleCustomDate()">📅 Özel Tarih Seç (Varsayılan: Bugün)</button>
+                    <div class="custom-date-box" id="customDateBox">
+                        <label>İşlem Tarihi:</label>
+                        <input type="date" id="txCustomDate">
+                    </div>
+                </div>
+
                 <button onclick="addTransaction()">Yeni İşlemi Kaydet</button>
             </div>
 
@@ -121,12 +142,13 @@
                 <div id="monthCheckboxContainer"></div>
             </div>
 
-            <!-- YEDEKLEME BUTONLARI -->
+            <!-- YEDEKLEME VE GÜVENLİK BUTONLARI -->
             <div class="backup-group">
                 <button class="backup-btn" onclick="exportBackup()">📥 Verileri Yedekle</button>
                 <button class="backup-btn" onclick="document.getElementById('importFile').click()">📤 Yedeği Yükle</button>
                 <input type="file" id="importFile" style="display:none" onchange="importBackup(event)" accept=".json">
             </div>
+            <button class="settings-btn" onclick="changePassword()">🔑 Şifreyi Değiştir</button>
         </div>
 
         <div class="list-section">

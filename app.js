@@ -1,4 +1,3 @@
-// Verileri al, yoksa örnek veri yükle
 let transactions = JSON.parse(localStorage.getItem('monthly_transactions')) || [
     { id: 1, title: 'Kasım Maaşı', amount: 25000, type: 'gelir', date: '2026-11', createdDate: '2026-11-01' },
     { id: 2, title: 'Aylık Market', amount: 1500, type: 'gider', date: '2026-11', createdDate: '2026-11-01' }
@@ -51,6 +50,43 @@ function unlockApp() {
 document.getElementById('passwordInput').addEventListener('keyup', function(event) {
     if (event.key === 'Enter') checkPassword();
 });
+
+// ŞİFRE DEĞİŞTİRME FONKSİYONU
+function changePassword() {
+    const currentInput = prompt("Şifrenizi değiştirmek için lütfen MEVCUT şifrenizi girin:");
+    if (currentInput === null) return;
+
+    if (currentInput !== savedPassword) {
+        alert("Hata: Mevcut şifre yanlış!");
+        return;
+    }
+
+    const newPassword = prompt("Yeni şifrenizi girin (en az 1 karakter):");
+    if (!newPassword || !newPassword.trim()) {
+        alert("İşlem iptal edildi veya geçersiz şifre girildi.");
+        return;
+    }
+
+    localStorage.setItem('app_password', newPassword.trim());
+    savedPassword = newPassword.trim();
+    alert("Şifreniz başarıyla güncellendi!");
+}
+
+// ÖZEL TARİH KUTUSUNU AÇ/KAPAT
+function toggleCustomDate() {
+    const box = document.getElementById('customDateBox');
+    const dateInput = document.getElementById('txCustomDate');
+    
+    if (box.style.display === 'flex') {
+        box.style.display = 'none';
+        dateInput.value = '';
+    } else {
+        box.style.display = 'flex';
+        // Açıldığında varsayılan olarak bugünün tarihini doldur
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+}
 
 function initMonthSelectors() {
     const checkboxContainer = document.getElementById('monthCheckboxContainer');
@@ -135,7 +171,6 @@ function updateUI() {
             if (tx.type === 'gelir') gelir += tx.amount;
             else gider += tx.amount;
 
-            // Eski kayıtlarda createdDate yoksa tx.date üzerinden gün türetelim
             const dateSource = tx.createdDate || (tx.date + "-01");
             const parts = dateSource.split('-');
             const pYear = parts[0];
@@ -174,29 +209,43 @@ function addTransaction() {
     const amountInp = document.getElementById('txAmount');
     const typeInp = document.getElementById('txType');
     const targetMonthSelect = document.getElementById('txTargetMonth');
+    const customDateInp = document.getElementById('txCustomDate');
 
     if (!titleInp.value.trim() || !amountInp.value || !targetMonthSelect.value) return;
 
-    const targetMonth = targetMonthSelect.value; 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const fullDateToday = `${year}-${month}-${day}`;
+    // Özel bir tarih seçilmişse onu, seçilmemişse bugünün tarihini al
+    let selectedDate;
+    if (customDateInp && customDateInp.value) {
+        selectedDate = customDateInp.value; // "YYYY-AA-GG"
+    } else {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        selectedDate = `${year}-${month}-${day}`;
+    }
+
+    // Seçilen tarihin yıl-ay bilgisinden tx.date türet
+    const [sYear, sMonth] = selectedDate.split('-');
+    const derivedMonth = `${sYear}-${sMonth}`;
 
     const newTx = {
         id: Date.now(),
         title: titleInp.value,
         amount: parseFloat(amountInp.value),
         type: typeInp.value,
-        date: targetMonth,        
-        createdDate: fullDateToday 
+        date: derivedMonth,        
+        createdDate: selectedDate 
     };
 
     transactions.unshift(newTx);
     titleInp.value = '';
     amountInp.value = '';
     
+    // Özel tarih kutusu açıksa temizle ve gizle
+    if (customDateInp) customDateInp.value = '';
+    document.getElementById('customDateBox').style.display = 'none';
+
     initMonthSelectors();
     updateUI();
 }
