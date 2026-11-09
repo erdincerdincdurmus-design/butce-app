@@ -1,7 +1,5 @@
-let transactions = JSON.parse(localStorage.getItem('monthly_transactions')) || [
-    { id: 1, title: 'Kasım Maaşı', amount: 25000, type: 'gelir', date: '2026-11', createdDate: '2026-11-01' },
-    { id: 2, title: 'Aylık Market', amount: 1500, type: 'gider', date: '2026-11', createdDate: '2026-11-01' }
-];
+// Verileri al, yoksa varsayılan boş dizi oluştur
+let transactions = JSON.parse(localStorage.getItem('monthly_transactions')) || [];
 
 const monthNames = [
     "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", 
@@ -15,15 +13,17 @@ function checkPasswordSetup() {
     const desc = document.getElementById('loginDesc');
     const btn = document.getElementById('loginBtn');
     if (!savedPassword) {
-        title.textContent = "İlk Kurulum";
-        desc.textContent = "Uygulamanız için yeni bir giriş şifresi belirleyin.";
-        btn.textContent = "Şifreyi Kaydet";
+        if(title) title.textContent = "İlk Kurulum";
+        if(desc) desc.textContent = "Uygulamanız için yeni bir giriş şifresi belirleyin.";
+        if(btn) btn.textContent = "Şifreyi Kaydet";
     }
 }
 
 function checkPassword() {
-    const input = document.getElementById('passwordInput').value;
+    const inputEl = document.getElementById('passwordInput');
+    const input = inputEl ? inputEl.value : '';
     const errorEl = document.getElementById('errorMsg');
+    
     if (!input.trim()) return;
 
     if (!savedPassword) {
@@ -34,22 +34,33 @@ function checkPassword() {
         if (input === savedPassword) {
             unlockApp();
         } else {
-            errorEl.style.display = 'block';
-            document.getElementById('passwordInput').value = '';
+            if (errorEl) errorEl.style.display = 'block';
+            if (inputEl) inputEl.value = '';
         }
     }
 }
 
 function unlockApp() {
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('appContainer').classList.add('show');
+    const overlay = document.getElementById('loginOverlay');
+    const appContainer = document.getElementById('appContainer');
+    
+    if (overlay) overlay.style.display = 'none';
+    if (appContainer) appContainer.classList.add('show');
+    
     initMonthSelectors();
     updateUI();
 }
 
-document.getElementById('passwordInput').addEventListener('keyup', function(event) {
-    if (event.key === 'Enter') checkPassword();
-});
+// Sayfa tamamen yüklendiğinde çalıştır
+window.onload = function() {
+    checkPasswordSetup();
+    const pwdInput = document.getElementById('passwordInput');
+    if (pwdInput) {
+        pwdInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') checkPassword();
+        });
+    }
+};
 
 // ŞİFRE DEĞİŞTİRME FONKSİYONU
 function changePassword() {
@@ -77,12 +88,13 @@ function toggleCustomDate() {
     const box = document.getElementById('customDateBox');
     const dateInput = document.getElementById('txCustomDate');
     
+    if (!box || !dateInput) return;
+
     if (box.style.display === 'flex') {
         box.style.display = 'none';
         dateInput.value = '';
     } else {
         box.style.display = 'flex';
-        // Açıldığında varsayılan olarak bugünün tarihini doldur
         const today = new Date().toISOString().split('T')[0];
         dateInput.value = today;
     }
@@ -112,30 +124,144 @@ function initMonthSelectors() {
     
     const sortedMonths = Array.from(availableMonths).sort().reverse();
     
-    checkboxContainer.innerHTML = '';
-    sortedMonths.forEach((mVal, index) => {
-        const [year, month] = mVal.split('-');
-        const mText = `${monthNames[parseInt(month) - 1]} ${year}`;
-        const label = document.createElement('label');
-        label.className = 'month-checkbox-item';
-        const isChecked = checkedMonths.size === 0 ? (index === 0) : checkedMonths.has(mVal);
-        label.innerHTML = `
-            <input type="checkbox" value="${mVal}" ${isChecked ? 'checked' : ''} onchange="updateUI()">
-            <span>${mText}</span>
-        `;
-        checkboxContainer.appendChild(label);
+    if (checkboxContainer) {
+        checkboxContainer.innerHTML = '';
+        sortedMonths.forEach((mVal, index) => {
+            const [year, month] = mVal.split('-');
+            const mText = `${monthNames[parseInt(month) - 1]} ${year}`;
+            const label = document.createElement('label');
+            label.className = 'month-checkbox-item';
+            const isChecked = checkedMonths.size === 0 ? (index === 0) : checkedMonths.has(mVal);
+            label.innerHTML = `
+                <input type="checkbox" value="${mVal}" ${isChecked ? 'checked' : ''} onchange="updateUI()">
+                <span>${mText}</span>
+            `;
+            checkboxContainer.appendChild(label);
+        });
+    }
+
+    if (targetMonthSelect) {
+        const savedTargetSelection = targetMonthSelect.value;
+        targetMonthSelect.innerHTML = '';
+        sortedMonths.forEach(mVal => {
+            const [year, month] = mVal.split('-');
+            const opt = document.createElement('option');
+            opt.value = mVal;
+            opt.textContent = `${monthNames[parseInt(month) - 1]} ${year}`;
+            targetMonthSelect.appendChild(opt);
+        });
+        if(savedTargetSelection) targetMonthSelect.value = savedTargetSelection;
+    }
+}
+
+// İŞLEMİ DÜZENLEME MODUNA GETİRME
+function editTransaction(id) {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    const editIdEl = document.getElementById('txEditId');
+    const titleEl = document.getElementById('txTitle');
+    const amountEl = document.getElementById('txAmount');
+    const typeEl = document.getElementById('txType');
+    const targetMonthEl = document.getElementById('txTargetMonth');
+    const customDateBox = document.getElementById('customDateBox');
+    const txCustomDate = document.getElementById('txCustomDate');
+    const saveBtn = document.getElementById('saveButton');
+
+    if (editIdEl) editIdEl.value = tx.id;
+    if (titleEl) titleEl.value = tx.title;
+    if (amountEl) amountEl.value = tx.amount;
+    if (typeEl) typeEl.value = tx.type;
+    if (targetMonthEl) targetMonthEl.value = tx.date;
+
+    if (tx.createdDate && customDateBox && txCustomDate) {
+        customDateBox.style.display = 'flex';
+        txCustomDate.value = tx.createdDate;
+    }
+
+    if (saveBtn) {
+        saveBtn.textContent = "Değişikliği Güncelle";
+        saveBtn.style.background = "#FF9500";
+    }
+    
+    if (titleEl) titleEl.focus();
+}
+
+function addTransaction() {
+    const editIdInp = document.getElementById('txEditId');
+    const titleInp = document.getElementById('txTitle');
+    const amountInp = document.getElementById('txAmount');
+    const typeInp = document.getElementById('txType');
+    const targetMonthSelect = document.getElementById('txTargetMonth');
+    const customDateInp = document.getElementById('txCustomDate');
+    const saveBtn = document.getElementById('saveButton');
+
+    if (!titleInp || !amountInp || !targetMonthSelect) return;
+    if (!titleInp.value.trim() || !amountInp.value || !targetMonthSelect.value) return;
+
+    let selectedDate;
+    if (customDateInp && customDateInp.value) {
+        selectedDate = customDateInp.value;
+    } else {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        selectedDate = `${year}-${month}-${day}`;
+    }
+
+    const [sYear, sMonth] = selectedDate.split('-');
+    const derivedMonth = `${sYear}-${sMonth}`;
+
+    const editId = editIdInp && editIdInp.value ? parseInt(editIdInp.value) : null;
+
+    if (editId) {
+        transactions = transactions.map(tx => {
+            if (tx.id === editId) {
+                return {
+                    ...tx,
+                    title: titleInp.value,
+                    amount: parseFloat(amountInp.value),
+                    type: typeInp.value,
+                    date: derivedMonth,
+                    createdDate: selectedDate
+                };
+            }
+            return tx;
+        });
+
+        if (editIdInp) editIdInp.value = '';
+        if (saveBtn) {
+            saveBtn.textContent = "Yeni İşlemi Kaydet";
+            saveBtn.style.background = "#007AFF";
+        }
+    } else {
+        const newTx = {
+            id: Date.now(),
+            title: titleInp.value,
+            amount: parseFloat(amountInp.value),
+            type: typeInp.value,
+            date: derivedMonth,        
+            createdDate: selectedDate 
+        };
+        transactions.unshift(newTx);
+    }
+
+    // 📌 OTOMATİK TARİH SIRALAMASI (En yeni tarih üstte yer alır)
+    transactions.sort((a, b) => {
+        const dateA = a.createdDate || (a.date + "-01");
+        const dateB = b.createdDate || (b.date + "-01");
+        return new Date(dateB) - new Date(dateA);
     });
 
-    const savedTargetSelection = targetMonthSelect ? targetMonthSelect.value : null;
-    targetMonthSelect.innerHTML = '';
-    sortedMonths.forEach(mVal => {
-        const [year, month] = mVal.split('-');
-        const opt = document.createElement('option');
-        opt.value = mVal;
-        opt.textContent = `${monthNames[parseInt(month) - 1]} ${year}`;
-        targetMonthSelect.appendChild(opt);
-    });
-    if(savedTargetSelection) targetMonthSelect.value = savedTargetSelection;
+    titleInp.value = '';
+    amountInp.value = '';
+    if (customDateInp) customDateInp.value = '';
+    const dateBox = document.getElementById('customDateBox');
+    if (dateBox) dateBox.style.display = 'none';
+    
+    initMonthSelectors();
+    updateUI();
 }
 
 function updateUI() {
@@ -152,6 +278,7 @@ function updateUI() {
         selectedMonths.push(cb.value);
     });
 
+    if (!list) return;
     list.innerHTML = '';
     let gelir = 0;
     let gider = 0;
@@ -162,7 +289,7 @@ function updateUI() {
         return matchesMonth && matchesSearch;
     });
 
-    listCountEl.textContent = `${filteredTx.length} işlem`;
+    if (listCountEl) listCountEl.textContent = `${filteredTx.length} işlem`;
 
     if (filteredTx.length === 0) {
         list.innerHTML = '<p class="empty-text">Arama kriterine veya seçilen döneme ait işlem bulunamadı.</p>';
@@ -186,9 +313,10 @@ function updateUI() {
                     <span class="item-title">${tx.title}</span>
                     <span class="item-date">📅 ${fullDateBadge}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
                     <span class="item-amount ${tx.type}">${tx.type === 'gelir' ? '+' : '-'}${tx.amount.toLocaleString('tr-TR')} ₺</span>
-                    <button class="delete-btn" onclick="deleteTransaction(${tx.id})">✕</button>
+                    <button class="edit-btn" onclick="editTransaction(${tx.id})" title="Düzenle">✏️</button>
+                    <button class="delete-btn" onclick="deleteTransaction(${tx.id})" title="Sil">✕</button>
                 </div>
             `;
             list.appendChild(li);
@@ -196,58 +324,14 @@ function updateUI() {
     }
 
     const bakiye = gelir - gider;
-    netBakiyeEl.textContent = `${bakiye.toLocaleString('tr-TR')} ₺`;
-    netBakiyeEl.style.color = bakiye >= 0 ? '#4CD964' : '#FF3B30';
-    toplamGelirEl.textContent = `+${gelir.toLocaleString('tr-TR')} ₺`;
-    toplamGiderEl.textContent = `-${gider.toLocaleString('tr-TR')} ₺`;
+    if (netBakiyeEl) {
+        netBakiyeEl.textContent = `${bakiye.toLocaleString('tr-TR')} ₺`;
+        netBakiyeEl.style.color = bakiye >= 0 ? '#4CD964' : '#FF3B30';
+    }
+    if (toplamGelirEl) toplamGelirEl.textContent = `+${gelir.toLocaleString('tr-TR')} ₺`;
+    if (toplamGiderEl) toplamGiderEl.textContent = `-${gider.toLocaleString('tr-TR')} ₺`;
 
     localStorage.setItem('monthly_transactions', JSON.stringify(transactions));
-}
-
-function addTransaction() {
-    const titleInp = document.getElementById('txTitle');
-    const amountInp = document.getElementById('txAmount');
-    const typeInp = document.getElementById('txType');
-    const targetMonthSelect = document.getElementById('txTargetMonth');
-    const customDateInp = document.getElementById('txCustomDate');
-
-    if (!titleInp.value.trim() || !amountInp.value || !targetMonthSelect.value) return;
-
-    // Özel bir tarih seçilmişse onu, seçilmemişse bugünün tarihini al
-    let selectedDate;
-    if (customDateInp && customDateInp.value) {
-        selectedDate = customDateInp.value; // "YYYY-AA-GG"
-    } else {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        selectedDate = `${year}-${month}-${day}`;
-    }
-
-    // Seçilen tarihin yıl-ay bilgisinden tx.date türet
-    const [sYear, sMonth] = selectedDate.split('-');
-    const derivedMonth = `${sYear}-${sMonth}`;
-
-    const newTx = {
-        id: Date.now(),
-        title: titleInp.value,
-        amount: parseFloat(amountInp.value),
-        type: typeInp.value,
-        date: derivedMonth,        
-        createdDate: selectedDate 
-    };
-
-    transactions.unshift(newTx);
-    titleInp.value = '';
-    amountInp.value = '';
-    
-    // Özel tarih kutusu açıksa temizle ve gizle
-    if (customDateInp) customDateInp.value = '';
-    document.getElementById('customDateBox').style.display = 'none';
-
-    initMonthSelectors();
-    updateUI();
 }
 
 function deleteTransaction(id) {
@@ -283,6 +367,12 @@ function importBackup(event) {
                     combined.forEach(item => uniqueMap.set(item.id, item));
                     transactions = Array.from(uniqueMap.values());
                     
+                    transactions.sort((a, b) => {
+                        const dateA = a.createdDate || (a.date + "-01");
+                        const dateB = b.createdDate || (b.date + "-01");
+                        return new Date(dateB) - new Date(dateA);
+                    });
+                    
                     initMonthSelectors();
                     updateUI();
                     alert("Yedek başarıyla yüklendi ve bütçeniz güncellendi!");
@@ -296,5 +386,3 @@ function importBackup(event) {
     };
     reader.readAsText(file);
 }
-
-checkPasswordSetup();
